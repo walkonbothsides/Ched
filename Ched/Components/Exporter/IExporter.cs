@@ -19,6 +19,11 @@ namespace Ched.Components.Exporter
         string FormatName { get; }
 
         /// <summary>
+        /// ファイル選択時に利用するフィルタを取得します。
+        /// </summary>
+        string Filter { get; }
+
+        /// <summary>
         /// 指定のファイルへデータをエクスポートします。
         /// </summary>
         /// <param name="path">エクスポート先のパス</param>

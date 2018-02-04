@@ -19,6 +19,11 @@ namespace Ched.Components.Exporter
             get { return "Seaurchin Score File(sus形式)"; }
         }
 
+        public string Filter
+        {
+            get { return "Seaurchin Score File(*.sus)|*.sus"; }
+        }
+
         public SusArgs CustomArgs { get; set; }
 
         public void Export(string path, ScoreBook book)
