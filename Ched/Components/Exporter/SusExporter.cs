@@ -351,6 +351,35 @@ namespace Ched.Components.Exporter
             }
         }
 
+        public IEnumerable<DiagnosticData> GetDiagnostics(ScoreBook book)
+        {
+            var notes = book.Score.Notes;
+            var shortNotes = notes.Taps
+                .Cast<TappableBase>()
+                .Concat(notes.ExTaps)
+                .Concat(notes.Flicks)
+                .Concat(notes.Damages);
+
+            var result = new List<DiagnosticData>();
+
+            // 重なっているショートノーツ
+            var overlapTicks = shortNotes
+                .GroupBy(p => p.LaneIndex)
+                .GroupBy(p => p.GroupBy(q => q.Tick))
+                .Select(p => p.Where(q => q.Count() > 1))
+                .SelectMany(p => p.Select(q => q.Key))
+                .ToList();
+
+            if (overlapTicks.Count > 0)
+                result.Add(new DiagnosticData(
+                    DiagnosticSeverity.Error,
+                    string.Format("ショートノーツが重複して配置されています。(小節位置: {0})", string.Concat(", ", overlapTicks.Select(p => p / book.Score.TicksPerBeat / 4 + 1)))
+                    ));
+
+            return result;
+        }
+
+
         public static int GetGcd(int a, int b)
         {
             if (a < b) return GetGcd(b, a);
