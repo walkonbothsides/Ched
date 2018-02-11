@@ -11,7 +11,7 @@ namespace Ched.Components.Exporter
     /// <summary>
     /// エクスポート可能な形式を表すインターフェースです。
     /// </summary>
-    public interface IExporter
+    public interface IExporter : IDiagnosable<ScoreBook>
     {
         /// <summary>
         /// フォーマット名を取得します。
@@ -45,6 +45,20 @@ namespace Ched.Components.Exporter
     public interface IExtendedExpoerter<TArgs> : IExporter
     {
         TArgs CustomArgs { get; set; }
+    }
+
+    /// <summary>
+    /// <typeparamref name="T"/>に対する検証を行うメソッドを提供します。
+    /// </summary>
+    /// <typeparam name="T">検証を行う型</typeparam>
+    public interface IDiagnosable<T>
+    {
+        /// <summary>
+        /// 与えられたオブジェクトに対して検証を行い結果を返します。
+        /// </summary>
+        /// <param name="obj">検証を行うオブジェクト</param>
+        /// <returns>検証結果を格納した<see cref="IEnumerable{DiagnosticData}"/></returns>
+        IEnumerable<DiagnosticData> GetDiagnostics(T obj);
     }
 
     /// <summary>
