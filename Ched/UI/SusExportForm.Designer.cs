@@ -1,6 +1,6 @@
 ﻿namespace Ched.UI
 {
-    partial class ExportForm
+    partial class SusExportForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ExportForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SusExportForm));
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
@@ -198,7 +198,7 @@
             this.hasPaddingBarBox.Name = "hasPaddingBarBox";
             this.hasPaddingBarBox.UseVisualStyleBackColor = true;
             // 
-            // ExportForm
+            // SusExportForm
             // 
             resources.ApplyResources(this, "$this");
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -229,7 +229,8 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "ExportForm";
+            this.Name = "SusExportForm";
+            this.Text = "エクスポート";
             ((System.ComponentModel.ISupportInitialize)(this.soundOffsetBox)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
