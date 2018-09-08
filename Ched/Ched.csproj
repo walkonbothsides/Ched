@@ -138,6 +138,7 @@
     <Compile Include="Plugins\IExportablePlugin.cs" />
     <Compile Include="Plugins\IPlugin.cs" />
     <Compile Include="Plugins\PluginManager.cs" />
+    <Compile Include="Plugins\SusExporterPlugin.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="UI\BookPropertiesForm.cs">
       <SubType>Form</SubType>
