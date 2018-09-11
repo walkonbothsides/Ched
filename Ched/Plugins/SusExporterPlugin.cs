@@ -17,6 +17,7 @@ namespace Ched.Plugins.Exporter
     {
         private SusExporter exporter = new SusExporter();
 
+        public Version Version => new Version(1, 0, 0, 0);
         public string Filter => "Seaurchin Score File(*.sus)|*.sus";
         public string DisplayName => "susフォーマット";
         public IExporter Exporter => exporter;
@@ -31,7 +32,7 @@ namespace Ched.Plugins.Exporter
             return JsonConvert.SerializeObject(exporter.CustomArgs);
         }
 
-        public void SetCustomData(string data)
+        public void SetCustomData(string data, Version dataVersion)
         {
             exporter.CustomArgs = string.IsNullOrEmpty(data) ? new SusArgs() : JsonConvert.DeserializeObject<SusArgs>(data);
         }
