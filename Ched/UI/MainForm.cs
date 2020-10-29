@@ -377,8 +377,16 @@ namespace Ched.UI
 
                 try
                 {
-                    using (var reader = new StreamReader(path))
-                        LoadBook(p.Import(reader));
+                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                    {
+                        var args = new ScoreBookImportPluginArgs(stream);
+                        var book = p.Import(args);
+                        LoadBook(book);
+                        if (args.Diagnostics.Count > 0)
+                        {
+                            // TODO: Diagnostics View
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
