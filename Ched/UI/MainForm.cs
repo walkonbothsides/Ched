@@ -359,8 +359,21 @@ namespace Ched.UI
                 {
                     try
                     {
-                        using (var reader = new StreamReader(q))
-                            LoadBook(p.Import(reader));
+                        using (var stream = new FileStream(q, FileMode.Open, FileAccess.Read))
+                        {
+                            var args = new ScoreBookImportPluginArgs(stream);
+                            PluginResult result = p.Import(args, out ScoreBook book);
+                            if (result == PluginResult.Aborted)
+                            {
+                                MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+                            LoadBook(book);
+                            if (args.Diagnostics.Count > 0)
+                            {
+                                // TODO: Diagnostics View
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
