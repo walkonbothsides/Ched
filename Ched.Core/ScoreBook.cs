@@ -116,6 +116,8 @@ namespace Ched.Core
             }
         }
 
+        public ScoreBook Clone() => JsonConvert.DeserializeObject<ScoreBook>(JsonConvert.SerializeObject(this, SerializerSettings));
+
         /// <summary>
         /// 指定のファイルから<see cref="ScoreBook"/>のインスタンスを生成します。
         /// 古いバージョンのファイルは現在のバージョン用に変換されます。

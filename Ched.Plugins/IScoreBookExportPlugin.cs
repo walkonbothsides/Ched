@@ -30,7 +30,7 @@ namespace Ched.Plugins
     /// <summary>
     /// エクスポート時にプラグインへ渡される情報を表します。
     /// </summary>
-    public interface IScoreBookExportPluginArgs
+    public interface IScoreBookExportPluginArgs : IDiagnosable
     {
         /// <summary>
         /// データを書き込む<see cref="System.IO.Stream"/>を取得します。
