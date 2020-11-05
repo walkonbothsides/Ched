@@ -16,36 +16,26 @@ namespace Ched.UI
 {
     public partial class SusExportForm : Form
     {
-        private readonly string ArgsKey = "sus";
-        private readonly string Filter = "Sliding Universal Score(*.sus)|*.sus";
+        public SusArgs ExportArgs { get; set; }
 
-        private SusExporter exporter = new SusExporter();
-
-        public string OutputPath
-        {
-            get { return outputBox.Text; }
-            set { outputBox.Text = value; }
-        }
-
-        public IExporter Exporter { get { return exporter; } }
-
-        public SusExportForm(ScoreBook book)
+        public SusExportForm(SusArgs args)
         {
             InitializeComponent();
             Icon = Properties.Resources.MainIcon;
             ShowInTaskbar = false;
+            titleBox.Enabled = false;
+            artistBox.Enabled = false;
+            notesDesignerBox.Enabled = false;
             hasPaddingBarBox.Visible = false;
+            browseButton.Visible = false;
+            outputBox.Visible = false;
+            AcceptButton = exportButton;
 
             levelDropDown.Items.AddRange(Enumerable.Range(1, 14).SelectMany(p => new string[] { p.ToString(), p + "+" }).ToArray());
             difficultyDropDown.Items.AddRange(new string[] { "BASIC", "ADVANCED", "EXPERT", "MASTER", "WORLD'S END" });
 
-            string source = book.ExportArgs.ContainsKey(ArgsKey) ? book.ExportArgs[ArgsKey] : "";
+            ExportArgs = args;
 
-            var args = Newtonsoft.Json.JsonConvert.DeserializeObject<SusArgs>(source) ?? new SusArgs();
-
-            titleBox.Text = book.Title;
-            artistBox.Text = book.ArtistName;
-            notesDesignerBox.Text = book.NotesDesignerName;
             difficultyDropDown.SelectedIndex = (int)args.PlayDifficulty;
             levelDropDown.Text = args.PlayLevel;
             songIdBox.Text = args.SongId;
@@ -53,48 +43,16 @@ namespace Ched.UI
             soundOffsetBox.Value = args.SoundOffset;
             jacketFileBox.Text = args.JacketFilePath;
 
-            browseButton.Click += (s, e) =>
-            {
-                var dialog = new SaveFileDialog()
-                {
-                    Filter = Filter
-                };
-                if (dialog.ShowDialog(this) == DialogResult.OK)
-                {
-                    outputBox.Text = dialog.FileName;
-                }
-            };
-
             exportButton.Click += (s, e) =>
             {
-                if (string.IsNullOrEmpty(OutputPath)) browseButton.PerformClick();
-                if (string.IsNullOrEmpty(OutputPath))
-                {
-                    MessageBox.Show(this, ErrorStrings.OutputPathRequired, Program.ApplicationName);
-                    return;
-                }
-                book.Title = titleBox.Text;
-                book.ArtistName = artistBox.Text;
-                book.NotesDesignerName = notesDesignerBox.Text;
                 args.PlayDifficulty = (SusArgs.Difficulty)difficultyDropDown.SelectedIndex;
                 args.PlayLevel = levelDropDown.Text;
                 args.SongId = songIdBox.Text;
                 args.SoundFileName = soundFileBox.Text;
                 args.SoundOffset = soundOffsetBox.Value;
                 args.JacketFilePath = jacketFileBox.Text;
-
-                try
-                {
-                    exporter.CustomArgs = args;
-                    exporter.Export(OutputPath, book);
-                    DialogResult = DialogResult.OK;
-                    Close();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Program.DumpException(ex);
-                }
+                DialogResult = DialogResult.OK;
+                Close();
             };
         }
     }
