@@ -16,13 +16,11 @@ using Ched.Localization;
 
 namespace Ched.Components.Exporter
 {
-    public class SusExporter : IExtendedExpoerter<SusArgs>
+    public class SusExporter
     {
         public string FormatName => "Sliding Universal Score(sus形式)";
 
         public SusArgs CustomArgs { get; set; }
-
-        public void Export(string path, ScoreBook book) => Export(book, new FileStream(path, FileMode.Create));
 
         public void Export(ScoreBook book, Stream stream)
         {
