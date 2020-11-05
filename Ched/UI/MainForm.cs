@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using Ched.Core.Notes;
 using Ched.Core;
 using Ched.Core.Events;
+using Ched.Components;
 using Ched.Configuration;
 using Ched.Localization;
 using Ched.Plugins;
@@ -38,11 +39,10 @@ namespace Ched.UI
         private MenuItem WidenLaneWidthMenuItem;
         private MenuItem NarrowLaneWidthMenuItem;
 
-        private ExportData LastExportData { get; set; }
-
         private SoundPreviewManager PreviewManager { get; }
         private SoundSource CurrentMusicSource;
 
+        private ExportManager ExportManager { get; } = new ExportManager();
         private Plugins.PluginManager PluginManager { get; } = Plugins.PluginManager.GetInstance();
 
         private bool IsPreviewMode
@@ -233,13 +233,13 @@ namespace Ched.UI
         {
             ScoreBook = book;
             OperationManager.Clear();
+            ExportManager.Load(book);
             NoteView.Initialize(book.Score);
             NoteViewScrollBar.Value = NoteViewScrollBar.GetMaximumValue();
             NoteViewScrollBar.Minimum = -Math.Max(NoteView.UnitBeatTick * 4 * 20, NoteView.Notes.GetLastTick());
             NoteViewScrollBar.SmallChange = NoteView.UnitBeatTick;
             UpdateThumbHeight();
             SetText(book.Path);
-            LastExportData = null;
             if (!string.IsNullOrEmpty(book.Path))
             {
                 SoundSettings.Default.ScoreSound.TryGetValue(book.Path, out CurrentMusicSource);
@@ -302,6 +302,7 @@ namespace Ched.UI
                 return;
             }
             CommitChanges();
+            ExportManager.Save(ScoreBook);
             ScoreBook.Save();
             if (CurrentMusicSource != null)
             {
@@ -311,13 +312,28 @@ namespace Ched.UI
             OperationManager.CommitChanges();
         }
 
-        protected void ExportFile()
+        protected void HandleExport(Func<(PluginResult Result, ScoreBookExportPluginArgs Args)> exportFunc)
         {
             CommitChanges();
-            var dialog = new ExportForm(ScoreBook);
-            if (dialog.ShowDialog(this) == DialogResult.OK)
+            try
             {
-                LastExportData = new ExportData() { OutputPath = dialog.OutputPath, Exporter = dialog.Exporter };
+                var (result, args) = exportFunc();
+                // TODO: Diagnostics View
+                switch (result)
+                {
+                    case PluginResult.Succeeded:
+                        MessageBox.Show(this, ErrorStrings.ExportComplete, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        break;
+
+                    case PluginResult.Aborted:
+                        MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Program.DumpExceptionTo(ex, "export_exception.json");
             }
         }
 
@@ -371,6 +387,14 @@ namespace Ched.UI
                 });
             })).ToArray();
 
+            var exportPluginItems = PluginManager.ScoreBookExportPlugins.Select(p => new MenuItem(p.DisplayName, (s, e) =>
+            {
+                var dialog = new SaveFileDialog() { Filter = p.FileFilter };
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+                HandleExport(() => ExportManager.Export(ScoreBook, p, dialog.FileName));
+            })).ToArray();
+
             var bookPropertiesMenuItem = new MenuItem(MainFormStrings.bookProperty, (s, e) =>
             {
                 var form = new BookPropertiesForm(ScoreBook, CurrentMusicSource);
@@ -391,7 +415,7 @@ namespace Ched.UI
                 new MenuItem(MainFormStrings.SaveAs + "(&A)", (s, e) => SaveAs()) { Shortcut = Shortcut.CtrlShiftS },
                 new MenuItem("-"),
                 new MenuItem(MainFormStrings.Import, importPluginItems),
-                new MenuItem(MainFormStrings.Export, (s, e) => ExportFile()),
+                new MenuItem(MainFormStrings.Export, exportPluginItems),
                 new MenuItem("-"),
                 bookPropertiesMenuItem,
                 new MenuItem("-"),
@@ -694,23 +718,13 @@ namespace Ched.UI
             };
             var exportButton = new ToolStripButton(MainFormStrings.Export, Resources.ExportIcon, (s, e) =>
             {
-                if (LastExportData == null)
+                if (!ExportManager.CanReExport)
                 {
-                    ExportFile();
+                    MessageBox.Show(this, ErrorStrings.NotExported, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                CommitChanges();
-                try
-                {
-                    LastExportData.Exporter.Export(LastExportData.OutputPath, ScoreBook);
-                    MessageBox.Show(this, ErrorStrings.ReExportComplete, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Program.DumpException(ex);
-                }
+                HandleExport(() => ExportManager.ReExport(ScoreBook));
             })
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
@@ -936,11 +950,5 @@ namespace Ched.UI
                 quantizeComboBox
             });
         }
-    }
-
-    internal class ExportData
-    {
-        public string OutputPath { get; set; }
-        public Components.Exporter.IExporter Exporter { get; set; }
     }
 }

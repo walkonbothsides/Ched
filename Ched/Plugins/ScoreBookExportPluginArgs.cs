@@ -4,17 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Ched.Core;
-using Ched.Plugins;
 
 namespace Ched.Plugins
 {
     public class ScoreBookExportPluginArgs : IScoreBookExportPluginArgs
     {
+        private readonly List<Diagnostic> _diagnostics = new List<Diagnostic>();
         private ScoreBook ScoreBook { get; }
         private Func<string> getCustomDataFunc { get; }
         private Action<string> setCustomDataFunc { get; }
 
+        public IEnumerable<Diagnostic> Diagnostics => _diagnostics;
         public Stream Stream { get; }
         public bool IsQuick { get; }
 
@@ -32,5 +34,10 @@ namespace Ched.Plugins
         public string GetCustomData() => getCustomDataFunc();
 
         public void SetCustomData(string data) => setCustomDataFunc(data);
+
+        public void ReportDiagnostic(Diagnostic diagnostic)
+        {
+            _diagnostics.Add(diagnostic);
+        }
     }
 }
