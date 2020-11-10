@@ -50,11 +50,19 @@ namespace Ched.Components
             string name = ResolvePluginName(plugin);
             LastOutputPath = dest;
 
-            using (var stream = new FileStream(dest, FileMode.Create, FileAccess.Write))
+            using (var ms = new MemoryStream())
             {
-                var args = new ScoreBookExportPluginArgs(book, stream, isQuick, () => CustomDataCache[name], customData => CustomDataCache[name] = customData);
+                var args = new ScoreBookExportPluginArgs(book, ms, isQuick, () => CustomDataCache[name], customData => CustomDataCache[name] = customData);
                 var result = plugin.Export(args);
-                LastUsedPlugin = plugin;
+                if (result == PluginResult.Succeeded)
+                {
+                    using (var fs = new FileStream(dest, FileMode.Create, FileAccess.Write))
+                    {
+                        var data = ms.ToArray();
+                        fs.Write(data, 0, data.Length);
+                    }
+                    LastUsedPlugin = plugin;
+                }
                 return (result, args);
             }
         }
