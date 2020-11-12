@@ -264,12 +264,21 @@ namespace Ched.UI
 
         protected void OpenFile()
         {
-            OpenFile(FileTypeFilter, p => LoadFile(p));
+            if (!TrySelectOpeningNewFile(FileTypeFilter, out string path)) return;
+            LoadFile(path);
         }
 
-        protected void OpenFile(string filter, Action<string> loadAction)
+        protected bool TrySelectOpeningNewFile(string filter, out string path)
         {
-            if (OperationManager.IsChanged && !this.ConfirmDiscardChanges()) return;
+            path = null;
+            if (OperationManager.IsChanged && !this.ConfirmDiscardChanges()) return false;
+
+            return TrySelectOpeningFile(filter, out path);
+        }
+
+        protected bool TrySelectOpeningFile(string filter, out string path)
+        {
+            path = null;
 
             var dialog = new OpenFileDialog()
             {
@@ -278,8 +287,10 @@ namespace Ched.UI
 
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
-                loadAction(dialog.FileName);
+                path = dialog.FileName;
+                return true;
             }
+            return false;
         }
 
         protected void SaveAs()
@@ -368,33 +379,32 @@ namespace Ched.UI
         {
             var importPluginItems = PluginManager.ScoreBookImportPlugins.Select(p => new MenuItem(p.DisplayName, (s, e) =>
             {
-                OpenFile(p.FileFilter, q =>
+                if (!TrySelectOpeningNewFile(p.FileFilter, out string path)) return;
+
+                try
                 {
-                    try
+                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
                     {
-                        using (var stream = new FileStream(q, FileMode.Open, FileAccess.Read))
+                        var args = new ScoreBookImportPluginArgs(stream);
+                        PluginResult result = p.Import(args, out ScoreBook book);
+                        if (result == PluginResult.Aborted)
                         {
-                            var args = new ScoreBookImportPluginArgs(stream);
-                            PluginResult result = p.Import(args, out ScoreBook book);
-                            if (result == PluginResult.Aborted)
-                            {
-                                MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
-                            LoadBook(book);
-                            if (args.Diagnostics.Count > 0)
-                            {
-                                // TODO: Diagnostics View
-                            }
+                            MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        LoadBook(book);
+                        if (args.Diagnostics.Count > 0)
+                        {
+                            // TODO: Diagnostics View
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        Program.DumpExceptionTo(ex, "import_exception.json");
-                        LoadEmptyBook();
-                    }
-                });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Program.DumpExceptionTo(ex, "import_exception.json");
+                    LoadEmptyBook();
+                }
             })).ToArray();
 
             var bookPropertiesMenuItem = new MenuItem(MainFormStrings.BookProperty, (s, e) =>
