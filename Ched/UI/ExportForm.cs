@@ -39,12 +39,9 @@ namespace Ched.UI
             levelDropDown.Items.AddRange(Enumerable.Range(1, 14).SelectMany(p => new string[] { p.ToString(), p + "+" }).ToArray());
             difficultyDropDown.Items.AddRange(new string[] { "BASIC", "ADVANCED", "EXPERT", "MASTER", "WORLD'S END" });
 
-            if (!book.ExporterArgs.ContainsKey(ArgsKey) || !(book.ExporterArgs[ArgsKey] is SusArgs))
-            {
-                book.ExporterArgs[ArgsKey] = new SusArgs();
-            }
+            string source = book.ExportArgs.ContainsKey(ArgsKey) ? book.ExportArgs[ArgsKey] : "";
 
-            var args = book.ExporterArgs[ArgsKey] as SusArgs;
+            var args = Newtonsoft.Json.JsonConvert.DeserializeObject<SusArgs>(source) ?? new SusArgs();
 
             titleBox.Text = book.Title;
             artistBox.Text = book.ArtistName;
