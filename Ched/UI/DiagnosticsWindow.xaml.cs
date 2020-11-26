@@ -96,4 +96,14 @@ namespace Ched.UI
             throw new NotImplementedException();
         }
     }
+
+    public static class XamlWindowExtensions
+    {
+        public static bool? ShowDialog(this Window window, System.Windows.Forms.Form form)
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(window);
+            helper.Owner = form.Handle;
+            return window.ShowDialog();
+        }
+    }
 }
