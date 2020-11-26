@@ -388,7 +388,17 @@ namespace Ched.UI
                         LoadBook(book);
                         if (args.Diagnostics.Count > 0)
                         {
-                            // TODO: Diagnostics View
+                            var vm = new DiagnosticsWindowViewModel()
+                            {
+                                Title = MainFormStrings.Import,
+                                Message = ErrorStrings.ImportComplete,
+                                Diagnostics = new System.Collections.ObjectModel.ObservableCollection<Diagnostic>(args.Diagnostics)
+                            };
+                            var window = new DiagnosticsWindow()
+                            {
+                                DataContext = vm
+                            };
+                            window.ShowDialog(this);
                         }
                     }
                 }
