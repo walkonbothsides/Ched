@@ -410,16 +410,27 @@ namespace Ched.UI
                     {
                         var args = new ScoreBookImportPluginArgs(stream);
                         PluginResult result = p.Import(args, out ScoreBook book);
-                        if (result == PluginResult.Aborted)
+                        var vm = new DiagnosticsViewViewModel()
                         {
-                            MessageBox.Show(this, ErrorStrings.ImportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
+                            Diagnostics = new System.Collections.ObjectModel.ObservableCollection<Diagnostic>(args.Diagnostics)
+                        };
+                        switch (result)
+                        {
+                            case PluginResult.Succeeded:
+                                vm.Message = "インポートが完了しました。";
+                                break;
+
+                            case PluginResult.Aborted:
+                                vm.Message = ErrorStrings.ImportFailed;
+                                break;
                         }
+                        var window = new DiagnosticsWindow()
+                        {
+                            DataContext = vm
+                        };
+                        window.ShowDialog(this);
+                        if (result == PluginResult.Aborted) return;
                         LoadBook(book);
-                        if (args.Diagnostics.Count > 0)
-                        {
-                            // TODO: Diagnostics View
-                        }
                     }
                 }
                 catch (Exception ex)
