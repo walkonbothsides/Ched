@@ -1,0 +1,81 @@
+﻿<Window x:Class="Ched.UI.DiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:Ched.UI"
+        xmlns:prop="clr-namespace:Ched.Properties"
+        xmlns:plugins="clr-namespace:Ched.Plugins;assembly=Ched.Plugins"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        mc:Ignorable="d"
+        d:DesignWidth="800">
+
+    <Window.DataContext>
+        <local:DiagnosticsViewViewModel />
+    </Window.DataContext>
+
+    <Grid Margin="16px" Height="Auto">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Label Content="{Binding Message}" Grid.Row="0"></Label>
+        <ListView ItemsSource="{Binding Diagnostics}" Grid.Row="1" MinHeight="200px" HorizontalContentAlignment="Stretch" Height="Auto" VerticalContentAlignment="Stretch">
+            <ListView.Resources>
+                <Style TargetType="GridViewColumnHeader">
+                    <Setter Property="HorizontalContentAlignment" Value="Left" />
+                    <!-- Default GridView Row Padding -->
+                    <Setter Property="Padding" Value="6px,0" />
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView>
+                    <GridView.Columns>
+                        <GridViewColumn Width="28px">
+                            <GridViewColumn.HeaderContainerStyle>
+                                <Style TargetType="GridViewColumnHeader">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </Style>
+                            </GridViewColumn.HeaderContainerStyle>
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Image>
+                                        <Image.Resources>
+                                            <local:BitmapImageSourceConverter x:Key="bitmapImageSourceConverter" />
+                                        </Image.Resources>
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="{x:Static plugins:DiagnosticSeverity.Error}">
+                                                        <Setter Property="Source" Value="{Binding Source={x:Static prop:Resources.ErrorIcon}, Converter={StaticResource ResourceKey=bitmapImageSourceConverter}}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="{x:Static plugins:DiagnosticSeverity.Warning}">
+                                                        <Setter Property="Source" Value="{Binding Source={x:Static prop:Resources.WarningIcon}, Converter={StaticResource ResourceKey=bitmapImageSourceConverter}}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="{x:Static plugins:DiagnosticSeverity.Info}">
+                                                        <Setter Property="Source" Value="{Binding Source={x:Static prop:Resources.InformationIcon}, Converter={StaticResource ResourceKey=bitmapImageSourceConverter}}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="メッセージ" Width="400px">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Path=Message}" TextWrapping="Wrap" Foreground="#333" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView.Columns>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button Grid.Row="2" Content="OK" IsDefault="True" HorizontalAlignment="Right" MinWidth="80" Padding="4px" Margin="8px,8px,0,0" />
+    </Grid>
+</Window>
