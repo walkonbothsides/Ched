@@ -6,23 +6,23 @@
         xmlns:local="clr-namespace:Ched.UI"
         xmlns:prop="clr-namespace:Ched.Properties"
         xmlns:plugins="clr-namespace:Ched.Plugins;assembly=Ched.Plugins"
+        SizeToContent="WidthAndHeight"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-        mc:Ignorable="d"
-        d:DesignWidth="800">
+        mc:Ignorable="d">
 
     <Window.DataContext>
         <local:DiagnosticsViewViewModel />
     </Window.DataContext>
 
-    <Grid Margin="16px" Height="Auto">
+    <Grid Margin="12px" Height="Auto">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="160px" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Label Content="{Binding Message}" Grid.Row="0"></Label>
-        <ListView ItemsSource="{Binding Diagnostics}" Grid.Row="1" MinHeight="200px" HorizontalContentAlignment="Stretch" Height="Auto" VerticalContentAlignment="Stretch">
+        <Label Content="{Binding Message}" Grid.Row="0" Margin="0,0,0,12px"></Label>
+        <ListView ItemsSource="{Binding Diagnostics}" Grid.Row="1" Margin="0,0,0,12px">
             <ListView.Resources>
                 <Style TargetType="GridViewColumnHeader">
                     <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -76,6 +76,6 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Button Grid.Row="2" Content="OK" IsDefault="True" HorizontalAlignment="Right" MinWidth="80" Padding="4px" Margin="8px,8px,0,0" />
+        <Button Grid.Row="2" Content="OK" IsDefault="True" HorizontalAlignment="Right" MinWidth="80" Padding="4px" Margin="8px,0,0,0" />
     </Grid>
 </Window>
