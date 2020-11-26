@@ -321,17 +321,25 @@ namespace Ched.UI
         {
             CommitChanges();
             var (result, args) = exportFunc();
-            // TODO: Diagnostics View
+            var vm = new DiagnosticsWindowViewModel()
+            {
+                Diagnostics = new System.Collections.ObjectModel.ObservableCollection<Diagnostic>(args.Diagnostics.ToList())
+            };
+            var window = new DiagnosticsWindow()
+            {
+                DataContext = vm
+            };
             switch (result)
             {
                 case PluginResult.Succeeded:
-                    MessageBox.Show(this, ErrorStrings.ExportComplete, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    vm.Message = ErrorStrings.ExportComplete;
                     break;
 
                 case PluginResult.Aborted:
-                    MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    vm.Message = ErrorStrings.ExportFailed;
                     break;
             }
+            window.ShowDialog();
         }
 
         protected void CommitChanges()
