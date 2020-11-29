@@ -338,34 +338,26 @@ namespace Ched.UI
         protected void HandleExport(Func<(PluginResult Result, ScoreBookExportPluginArgs Args)> exportFunc)
         {
             CommitChanges();
-            try
+            var (result, args) = exportFunc();
+            var vm = new DiagnosticsViewViewModel()
             {
-                var (result, args) = exportFunc();
-                var vm = new DiagnosticsViewViewModel()
-                {
-                    Diagnostics = new System.Collections.ObjectModel.ObservableCollection<Diagnostic>(args.Diagnostics.ToList())
-                };
-                var window = new DiagnosticsWindow()
-                {
-                    DataContext = vm
-                };
-                switch (result)
-                {
-                    case PluginResult.Succeeded:
-                        vm.Message = ErrorStrings.ExportComplete;
-                        break;
+                Diagnostics = new System.Collections.ObjectModel.ObservableCollection<Diagnostic>(args.Diagnostics.ToList())
+            };
+            var window = new DiagnosticsWindow()
+            {
+                DataContext = vm
+            };
+            switch (result)
+            {
+                case PluginResult.Succeeded:
+                    vm.Message = ErrorStrings.ExportComplete;
+                    break;
 
-                    case PluginResult.Aborted:
-                        vm.Message = ErrorStrings.ExportFailed;
-                        break;
-                }
-                window.ShowDialog();
+                case PluginResult.Aborted:
+                    vm.Message = ErrorStrings.ExportFailed;
+                    break;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Program.DumpExceptionTo(ex, "export_exception.json");
-            }
+            window.ShowDialog();
         }
 
         protected void CommitChanges()
