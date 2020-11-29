@@ -320,25 +320,17 @@ namespace Ched.UI
         protected void HandleExport(Func<(PluginResult Result, ScoreBookExportPluginArgs Args)> exportFunc)
         {
             CommitChanges();
-            try
+            var (result, args) = exportFunc();
+            // TODO: Diagnostics View
+            switch (result)
             {
-                var (result, args) = exportFunc();
-                // TODO: Diagnostics View
-                switch (result)
-                {
-                    case PluginResult.Succeeded:
-                        MessageBox.Show(this, ErrorStrings.ExportComplete, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        break;
+                case PluginResult.Succeeded:
+                    MessageBox.Show(this, ErrorStrings.ExportComplete, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    break;
 
-                    case PluginResult.Aborted:
-                        MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Program.DumpExceptionTo(ex, "export_exception.json");
+                case PluginResult.Aborted:
+                    MessageBox.Show(this, ErrorStrings.ExportFailed, Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    break;
             }
         }
 
