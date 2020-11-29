@@ -52,8 +52,17 @@ namespace Ched.Components
 
             using (var ms = new MemoryStream())
             {
+                PluginResult result = PluginResult.None;
                 var args = new ScoreBookExportPluginArgs(book, ms, isQuick, () => CustomDataCache[name], customData => CustomDataCache[name] = customData);
-                var result = plugin.Export(args);
+                try
+                {
+                    result = plugin.Export(args);
+                }
+                catch (Exception ex)
+                {
+                    result = PluginResult.Aborted;
+                    Program.DumpExceptionTo(ex, "export_exception.json");
+                }
                 if (result == PluginResult.Succeeded)
                 {
                     using (var fs = new FileStream(dest, FileMode.Create, FileAccess.Write))
