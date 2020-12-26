@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Timers;
 
 using Ched.Core.Events;
 using Ched.Core.Notes;
@@ -19,7 +19,7 @@ namespace Ched.UI
         private int CurrentTick { get; set; }
         private SoundSource ClapSource { get; set; }
         private SoundManager SoundManager { get; } = new SoundManager();
-        private NoteView NoteView { get; set; }
+        private ISoundPreviewContext PreviewContext { get; set; }
         private LinkedListNode<int?> TickElement;
         private LinkedListNode<BPMChangeEvent> BPMElement;
         private int LastSystemTick { get; set; }
@@ -33,46 +33,31 @@ namespace Ched.UI
         public bool IsStopAtLastNote { get; set; }
         public bool IsSupported { get { return SoundManager.IsSupported; } }
 
-        public SoundPreviewManager(NoteView noteView)
+        public SoundPreviewManager()
         {
             ClapSource = new SoundSource("guide.mp3", 0.036);
-            NoteView = noteView;
-            Timer.Tick += Tick;
-            SoundManager.ExceptionThrown += (s, e) => noteView.InvokeIfRequired(() =>
+            Timer.Elapsed += Tick;
+            SoundManager.ExceptionThrown += (s, e) =>
             {
                 Stop();
                 ExceptionThrown?.Invoke(this, EventArgs.Empty);
-            });
+            };
         }
 
-        public bool Start(SoundSource music)
-        {
-            return Start(music, 0); // 再生位置計算めんどいので最初から
-        }
-
-        public bool Start(SoundSource music, int startTick)
+        public bool Start(ISoundPreviewContext context, int startTick)
         {
             if (Playing) throw new InvalidOperationException();
-            if (music == null) throw new ArgumentNullException("music");
+            if (context == null) throw new ArgumentNullException("context");
+            PreviewContext = context;
             SoundManager.Register(ClapSource.FilePath);
-            SoundManager.Register(music.FilePath);
-            EndTick = IsStopAtLastNote ? NoteView.Notes.GetLastTick() : GetTickFromTime(SoundManager.GetDuration(music.FilePath), NoteView.ScoreEvents.BPMChangeEvents);
+            SoundManager.Register(context.MusicSource.FilePath);
+
+            var ticks = new SortedSet<int>(context.GuideTicks).ToList();
+            TickElement = new LinkedList<int?>(ticks.Where(p => p >= startTick).OrderBy(p => p).Select(p => new int?(p))).First;
+            BPMElement = new LinkedList<BPMChangeEvent>(context.BpmDefinitions.OrderBy(p => p.Tick)).First;
+
+            EndTick = IsStopAtLastNote ? ticks[ticks.Count - 1] : GetTickFromTime(SoundManager.GetDuration(context.MusicSource.FilePath), context.BpmDefinitions);
             if (EndTick < startTick) return false;
-
-            var tickSet = new HashSet<int>();
-            var notes = NoteView.Notes;
-            var shortNotesTick = notes.Taps.Cast<TappableBase>().Concat(notes.ExTaps).Concat(notes.Flicks).Concat(notes.Damages).Select(p => p.Tick);
-            var holdsTick = notes.Holds.SelectMany(p => new int[] { p.StartTick, p.StartTick + p.Duration });
-            var slidesTick = notes.Slides.SelectMany(p => new int[] { p.StartTick }.Concat(p.StepNotes.Where(q => q.IsVisible).Select(q => q.Tick)));
-            var airActionsTick = notes.AirActions.SelectMany(p => p.ActionNotes.Select(q => p.StartTick + q.Offset));
-
-            foreach (int tick in shortNotesTick.Concat(holdsTick).Concat(slidesTick).Concat(airActionsTick))
-            {
-                tickSet.Add(tick);
-            }
-            TickElement = new LinkedList<int?>(tickSet.Where(p => p >= startTick).OrderBy(p => p).Select(p => new int?(p))).First;
-
-            BPMElement = new LinkedList<BPMChangeEvent>(NoteView.ScoreEvents.BPMChangeEvents.OrderBy(p => p.Tick)).First;
 
             // スタート時まで進める
             while (TickElement != null && TickElement.Value < startTick) TickElement = TickElement.Next;
@@ -83,13 +68,13 @@ namespace Ched.UI
             CurrentTick = InitialTick;
             StartTick = startTick;
 
-            TimeSpan startTime = GetTimeFromTick(startTick, NoteView.ScoreEvents.BPMChangeEvents);
-            TimeSpan headGap = TimeSpan.FromSeconds(-music.Latency) - startTime;
+            TimeSpan startTime = GetTimeFromTick(startTick, context.BpmDefinitions);
+            TimeSpan headGap = TimeSpan.FromSeconds(-context.MusicSource.Latency) - startTime;
             elapsedTick = 0;
             Task.Run(() =>
             {
                 LastSystemTick = Environment.TickCount;
-                NoteView.Invoke((MethodInvoker)(() => Timer.Start()));
+                Timer.Start();
 
                 System.Threading.Thread.Sleep(TimeSpan.FromSeconds(Math.Max(ClapSource.Latency, 0)));
                 if (headGap.TotalSeconds > 0)
@@ -97,7 +82,7 @@ namespace Ched.UI
                     System.Threading.Thread.Sleep(headGap);
                 }
                 if (!Playing) return;
-                SoundManager.Play(music.FilePath, startTime + TimeSpan.FromSeconds(music.Latency));
+                SoundManager.Play(context.MusicSource.FilePath, startTime + TimeSpan.FromSeconds(context.MusicSource.Latency));
             })
             .ContinueWith(p =>
             {
@@ -126,14 +111,14 @@ namespace Ched.UI
             int elapsed = now - LastSystemTick;
             LastSystemTick = now;
 
-            elapsedTick += NoteView.UnitBeatTick * (double)BPMElement.Value.BPM * elapsed / 60 / 1000;
+            elapsedTick += PreviewContext.TicksPerBeat * (double)BPMElement.Value.BPM * elapsed / 60 / 1000;
             CurrentTick = (int)(InitialTick + elapsedTick);
             if (CurrentTick >= StartTick)
                 TickUpdated?.Invoke(this, new TickUpdatedEventArgs(Math.Max(CurrentTick, 0)));
 
             while (BPMElement.Next != null && BPMElement.Next.Value.Tick <= CurrentTick) BPMElement = BPMElement.Next;
 
-            if (NoteView.CurrentTick >= EndTick + NoteView.UnitBeatTick)
+            if (CurrentTick >= EndTick + PreviewContext.TicksPerBeat)
             {
                 Stop();
             }
@@ -150,12 +135,12 @@ namespace Ched.UI
 
         private int GetLatencyTick(double latency, double bpm)
         {
-            return (int)(NoteView.UnitBeatTick * latency * bpm / 60);
+            return (int)(PreviewContext.TicksPerBeat * latency * bpm / 60);
         }
 
         private TimeSpan GetLatencyTime(int tick, double bpm)
         {
-            return TimeSpan.FromSeconds((double)tick * 60 / NoteView.UnitBeatTick / bpm);
+            return TimeSpan.FromSeconds((double)tick * 60 / PreviewContext.TicksPerBeat / bpm);
         }
 
         private TimeSpan GetTimeFromTick(int tick, IEnumerable<BPMChangeEvent> bpmEvents)
@@ -193,6 +178,40 @@ namespace Ched.UI
         public void Dispose()
         {
             SoundManager.Dispose();
+        }
+    }
+
+    public interface ISoundPreviewContext
+    {
+        int TicksPerBeat { get; }
+        IEnumerable<int> GuideTicks { get; }
+        IEnumerable<BPMChangeEvent> BpmDefinitions { get; }
+        SoundSource MusicSource { get; }
+    }
+
+    public class SoundPreviewContext : ISoundPreviewContext
+    {
+        private Core.Score score;
+
+        public int TicksPerBeat => score.TicksPerBeat;
+        public IEnumerable<int> GuideTicks => GetGuideTicks(score.Notes);
+        public IEnumerable<BPMChangeEvent> BpmDefinitions => score.Events.BPMChangeEvents;
+        public SoundSource MusicSource { get; set; }
+
+        public SoundPreviewContext(Core.Score score, SoundSource musicSource)
+        {
+            this.score = score;
+            MusicSource = musicSource;
+        }
+
+        private IEnumerable<int> GetGuideTicks(Core.NoteCollection notes)
+        {
+            var shortNotesTick = notes.Taps.Cast<TappableBase>().Concat(notes.ExTaps).Concat(notes.Flicks).Concat(notes.Damages).Select(p => p.Tick);
+            var holdsTick = notes.Holds.SelectMany(p => new int[] { p.StartTick, p.StartTick + p.Duration });
+            var slidesTick = notes.Slides.SelectMany(p => new int[] { p.StartTick }.Concat(p.StepNotes.Where(q => q.IsVisible).Select(q => q.Tick)));
+            var airActionsTick = notes.AirActions.SelectMany(p => p.ActionNotes.Select(q => p.StartTick + q.Offset));
+
+            return shortNotesTick.Concat(holdsTick).Concat(slidesTick).Concat(airActionsTick);
         }
     }
 
