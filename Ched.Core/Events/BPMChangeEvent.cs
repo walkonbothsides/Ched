@@ -12,12 +12,12 @@ namespace Ched.Core.Events
     /// </summary>
     [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)]
     [DebuggerDisplay("Tick = {Tick}, Value = {BPM}")]
-    public class BPMChangeEvent : EventBase
+    public class BpmChangeEvent : EventBase
     {
         [Newtonsoft.Json.JsonProperty]
         private decimal bpm;
 
-        public decimal BPM
+        public decimal Bpm
         {
             get { return bpm; }
             set { bpm = value; }

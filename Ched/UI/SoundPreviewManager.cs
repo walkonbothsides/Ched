@@ -21,7 +21,7 @@ namespace Ched.UI
         private SoundManager SoundManager { get; } = new SoundManager();
         private ISoundPreviewContext PreviewContext { get; set; }
         private LinkedListNode<int?> TickElement;
-        private LinkedListNode<BPMChangeEvent> BPMElement;
+        private LinkedListNode<BpmChangeEvent> BpmElement;
         private int LastSystemTick { get; set; }
         private int InitialTick { get; set; }
         private int StartTick { get; set; }
@@ -54,16 +54,16 @@ namespace Ched.UI
 
             var ticks = new SortedSet<int>(context.GuideTicks).ToList();
             TickElement = new LinkedList<int?>(ticks.Where(p => p >= startTick).OrderBy(p => p).Select(p => new int?(p))).First;
-            BPMElement = new LinkedList<BPMChangeEvent>(context.BpmDefinitions.OrderBy(p => p.Tick)).First;
+            BpmElement = new LinkedList<BpmChangeEvent>(context.BpmDefinitions.OrderBy(p => p.Tick)).First;
 
             EndTick = IsStopAtLastNote ? ticks[ticks.Count - 1] : GetTickFromTime(SoundManager.GetDuration(context.MusicSource.FilePath), context.BpmDefinitions);
             if (EndTick < startTick) return false;
 
             // スタート時まで進める
             while (TickElement != null && TickElement.Value < startTick) TickElement = TickElement.Next;
-            while (BPMElement.Next != null && BPMElement.Next.Value.Tick <= startTick) BPMElement = BPMElement.Next;
+            while (BpmElement.Next != null && BpmElement.Next.Value.Tick <= startTick) BpmElement = BpmElement.Next;
 
-            int clapLatencyTick = GetLatencyTick(ClapSource.Latency, (double)BPMElement.Value.BPM);
+            int clapLatencyTick = GetLatencyTick(ClapSource.Latency, (double)BpmElement.Value.Bpm);
             InitialTick = startTick - clapLatencyTick;
             CurrentTick = InitialTick;
             StartTick = startTick;
@@ -111,19 +111,19 @@ namespace Ched.UI
             int elapsed = now - LastSystemTick;
             LastSystemTick = now;
 
-            elapsedTick += PreviewContext.TicksPerBeat * (double)BPMElement.Value.BPM * elapsed / 60 / 1000;
+            elapsedTick += PreviewContext.TicksPerBeat * (double)BpmElement.Value.Bpm * elapsed / 60 / 1000;
             CurrentTick = (int)(InitialTick + elapsedTick);
             if (CurrentTick >= StartTick)
                 TickUpdated?.Invoke(this, new TickUpdatedEventArgs(Math.Max(CurrentTick, 0)));
 
-            while (BPMElement.Next != null && BPMElement.Next.Value.Tick <= CurrentTick) BPMElement = BPMElement.Next;
+            while (BpmElement.Next != null && BpmElement.Next.Value.Tick <= CurrentTick) BpmElement = BpmElement.Next;
 
             if (CurrentTick >= EndTick + PreviewContext.TicksPerBeat)
             {
                 Stop();
             }
 
-            int latencyTick = GetLatencyTick(ClapSource.Latency, (double)BPMElement.Value.BPM);
+            int latencyTick = GetLatencyTick(ClapSource.Latency, (double)BpmElement.Value.Bpm);
             if (TickElement == null || TickElement.Value - latencyTick > CurrentTick) return;
             while (TickElement != null && TickElement.Value - latencyTick <= CurrentTick)
             {
@@ -143,35 +143,35 @@ namespace Ched.UI
             return TimeSpan.FromSeconds((double)tick * 60 / PreviewContext.TicksPerBeat / bpm);
         }
 
-        private TimeSpan GetTimeFromTick(int tick, IEnumerable<BPMChangeEvent> bpmEvents)
+        private TimeSpan GetTimeFromTick(int tick, IEnumerable<BpmChangeEvent> bpmEvents)
         {
-            var bpm = new LinkedList<BPMChangeEvent>(bpmEvents.OrderBy(p => p.Tick)).First;
+            var bpm = new LinkedList<BpmChangeEvent>(bpmEvents.OrderBy(p => p.Tick)).First;
             if (bpm.Value.Tick != 0) throw new ArgumentException("Initial BPM change event not found");
 
             var time = new TimeSpan();
             while (bpm.Next != null)
             {
                 if (tick < bpm.Next.Value.Tick) break; // 現在のBPMで到達
-                time += GetLatencyTime(bpm.Next.Value.Tick - bpm.Value.Tick, (double)bpm.Value.BPM);
+                time += GetLatencyTime(bpm.Next.Value.Tick - bpm.Value.Tick, (double)bpm.Value.Bpm);
                 bpm = bpm.Next;
             }
-            return time + GetLatencyTime(tick - bpm.Value.Tick, (double)bpm.Value.BPM);
+            return time + GetLatencyTime(tick - bpm.Value.Tick, (double)bpm.Value.Bpm);
         }
 
-        private int GetTickFromTime(TimeSpan time, IEnumerable<BPMChangeEvent> bpmEvents)
+        private int GetTickFromTime(TimeSpan time, IEnumerable<BpmChangeEvent> bpmEvents)
         {
-            var bpm = new LinkedList<BPMChangeEvent>(bpmEvents.OrderBy(p => p.Tick)).First;
+            var bpm = new LinkedList<BpmChangeEvent>(bpmEvents.OrderBy(p => p.Tick)).First;
             if (bpm.Value.Tick != 0) throw new ArgumentException("Initial BPM change event not found");
 
             TimeSpan sum = new TimeSpan();
             while (bpm.Next != null)
             {
-                TimeSpan section = GetLatencyTime(bpm.Next.Value.Tick - bpm.Value.Tick, (double)bpm.Value.BPM);
+                TimeSpan section = GetLatencyTime(bpm.Next.Value.Tick - bpm.Value.Tick, (double)bpm.Value.Bpm);
                 if (time < sum + section) break;
                 sum += section;
                 bpm = bpm.Next;
             }
-            return bpm.Value.Tick + GetLatencyTick((time - sum).TotalSeconds, (double)bpm.Value.BPM);
+            return bpm.Value.Tick + GetLatencyTick((time - sum).TotalSeconds, (double)bpm.Value.Bpm);
         }
 
 
@@ -185,7 +185,7 @@ namespace Ched.UI
     {
         int TicksPerBeat { get; }
         IEnumerable<int> GuideTicks { get; }
-        IEnumerable<BPMChangeEvent> BpmDefinitions { get; }
+        IEnumerable<BpmChangeEvent> BpmDefinitions { get; }
         SoundSource MusicSource { get; }
     }
 
@@ -195,7 +195,7 @@ namespace Ched.UI
 
         public int TicksPerBeat => score.TicksPerBeat;
         public IEnumerable<int> GuideTicks => GetGuideTicks(score.Notes);
-        public IEnumerable<BPMChangeEvent> BpmDefinitions => score.Events.BPMChangeEvents;
+        public IEnumerable<BpmChangeEvent> BpmDefinitions => score.Events.BpmChangeEvents;
         public SoundSource MusicSource { get; set; }
 
         public SoundPreviewContext(Core.Score score, SoundSource musicSource)
